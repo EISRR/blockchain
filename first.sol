@@ -1,6 +1,37 @@
-pragma solidity >=0.4.22 <0.6.0;
+pragma solidity >=0.4.22 <0.8.2;
 
-contract Test
+contract Owned {
+    
+    address private owner;
+    
+    constructor() public
+    {
+        owner = msg.sender;
+    }
+    
+    modifier OnlyOwner
+    {
+        require
+        (
+            msg.sender == owner,
+            'You must be the owner!'
+        );
+        _;
+    }
+    
+    function ChangeOwner(address newOwner) public OnlyOwner 
+    {
+        owner = newOwner;
+    }
+    
+    function GetOwner() public returns (address)
+    {
+        return owner;
+    }
+    
+}
+
+contract Test is Owned
 {
     enum RequestType {NewHome, EditHome}
     
@@ -16,7 +47,7 @@ contract Test
         string name;
         uint passSer;
         uint passNum;
-        string date; //TODO переделать
+        string date;
         string phoneNumber;
     }
     
@@ -36,17 +67,19 @@ contract Test
     
     struct Employee
     {
-        string id;
         string name;
         string position;
         string phoneNumber;
+        bool isset;
     }
     
     mapping(string => Employee) private employees;
     mapping(address => Owner) private owners;
     mapping(address => Request) private requests;
+    mapping(unit => address) private reqCase;
     mapping(string => Home) private homes;
     mapping(string => Ownership[]) private ownerships;
+    unit countId = 0;
     
     // ДОМ
     function AddHome(string memory _adr, uint _area, uint _cost) public
@@ -70,29 +103,62 @@ contract Test
     }
     
     // РАБОТНИК
-    function AddEmployee(string memory _id, string memory _name, string memory _position, string memory _phoneNumber) public
+    function AddEmployee(address _adr, string memory _name, string memory _position, string memory _phoneNumber) public OnlyOwner
     {
         Employee memory e;
         e.name = _name;
         e.position = _position;
         e.phoneNumber = _phoneNumber;
+        e.isset = true;
         employees[_id] = e;
     }
     
-    function GetEmployee(string memory id) public returns(string memory _name, string memory _position, string memory _phoneNumber)
+    function GetEmployee(address adr) public OnlyOwner returns(string memory _name, string memory _position, string memory _phoneNumber)
     {
-        return (employees[id].name, employees[id].position, employees[id].phoneNumber);
+        return (employees[adr].name, employees[adr].position, employees[adr].phoneNumber);
     }
     
-    function EditEmployee(string memory _id, string memory _name, string memory _position, string memory _phoneNumber) public
+    function EditEmployee(address _adr, string memory _name, string memory _position, string memory _phoneNumber) public Only Owner
     {
-        employees[_id].name = _name;
-        employees[_id].position = _position;
-        employees[_id].phoneNumber = _phoneNumber;
+        employees[_adr].name = _name;
+        employees[_adr].position = _position;
+        employees[_adr].phoneNumber = _phoneNumber;
     }
     
-    function DeleteEmployee(string memory id) public
+    function DeleteEmployee(address _adr) public OnlyOwner
     {
-        delete employees[id];
+        delete employees[_adr];
+    }
+
+    // ЗАПРОС
+    function AddRequestHome(address empl, string memory _homeAddress, uint _area, uint _cost) public 
+    {
+        Request memory r;
+        Home memory h;
+        h.homeAddress = _homeAddress;
+        h.area = _area;
+        h.cost = _cost;
+        r.requestType = RequestType.NewHome;
+        r.home = h;
+        r.result = 1;
+        requests[empl] = r;
+        reqCase[countID] = empl;
+        countID++;
+    }
+    
+    function GetRequests() public returns (string[] memory reqType, string[] memory Address, uint256[] memory Area, uint256[] memory Cost)
+    {
+        string[] memory reqType = new string[](countID);
+        string[] memory Address = new string[](countID);
+        uint[] memory Cost = new uint[](countID);
+        uint[] memory Area = new uint[](countID);
+        for (uint i = 0; i < countID; i++) 
+        {
+            reqType[i] = requests[reqCase[i]].requestType == RequestType.NewHome ? "NewHome" : "EditHome";
+            Address[i] = requests[reqCase[i]].home.homeAddress;
+            Cost[i] = requests[reqCase[i]].home.cost;
+            Area[i] = requests[reqCase[i]].home.area;
+        }
+        return (reqType, Address, Cost, Area);
     }
 }
