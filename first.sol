@@ -1,4 +1,5 @@
 pragma solidity >=0.4.22 <0.8.2;
+pragma experimental ABIEncoderV2;
 
 contract Owned {
     
@@ -35,6 +36,8 @@ contract Test is Owned
 {
     enum RequestType {NewHome, EditHome}
     
+    unit private cost = 1e12;
+    
     struct Ownership
     {
         string homeAddress;
@@ -63,6 +66,10 @@ contract Test is Owned
         RequestType requestType;
         Home home;
         uint result;
+        unit area;
+        unit cost;
+        address adr;
+        bool isProcessed;
     }
     
     struct Employee
@@ -73,15 +80,31 @@ contract Test is Owned
         bool isset;
     }
     
-    mapping(string => Employee) private employees;
+    mapping(address => Employee) private employees;
     mapping(address => Owner) private owners;
     mapping(address => Request) private requests;
-    mapping(unit => address) private reqCase;
+    address[] requestInitiator;
     mapping(string => Home) private homes;
     mapping(string => Ownership[]) private ownerships;
-    unit countId = 0;
     
-    // ДОМ
+    unit private countId = 0;
+    
+     modifier OnlyEmployee {
+        require(
+            employees[msg.sender].isset != false,
+            'Only Employee can run this function!'
+            );
+        _;
+    }
+    
+    modifier Costs(uint value){
+        require(
+            msg.value >= value,
+            'Not enough funds!!'
+            );
+        _;
+    }
+    
     function AddHome(string memory _adr, uint _area, uint _cost) public
     {
         Home memory h;
@@ -102,7 +125,6 @@ contract Test is Owned
         homes[_adr].cost = _cost;
     }
     
-    // РАБОТНИК
     function AddEmployee(address _adr, string memory _name, string memory _position, string memory _phoneNumber) public OnlyOwner
     {
         Employee memory e;
@@ -127,38 +149,45 @@ contract Test is Owned
     
     function DeleteEmployee(address _adr) public OnlyOwner
     {
-        delete employees[_adr];
+        if (employees[empl].isset == true){
+            delete employees[empl];
+            return true;
+        }
+        return false;
     }
 
     // ЗАПРОС
     function AddRequestHome(address empl, string memory _homeAddress, uint _area, uint _cost) public 
     {
         Request memory r;
-        Home memory h;
-        h.homeAddress = _homeAddress;
-        h.area = _area;
-        h.cost = _cost;
-        r.requestType = RequestType.NewHome;
-        r.home = h;
-        r.result = 1;
-        requests[empl] = r;
-        reqCase[countID] = empl;
-        countID++;
+        r.requestType = rType == 0? RequestType.NewHome: RequestType.EditHome;
+        r.homeAddress = adr;
+        r.area = area;
+        r.cost = cost;
+        r.result = 0;
+        r.adr = rType==0?address(0):newOwner;
+        r.isProcessed = false;
+        requests[msg.sender] = r;
+        requestInitiator.push(msg.sender);
+        countID += msg.value;
+        return true;
     }
     
-    function GetRequests() public returns (string[] memory reqType, string[] memory Address, uint256[] memory Area, uint256[] memory Cost)
+    function GetRequest() public OnlyEmployee returns (uint[] memory, uint[] memory, string[] memory)
     {
-        string[] memory reqType = new string[](countID);
-        string[] memory Address = new string[](countID);
-        uint[] memory Cost = new uint[](countID);
-        uint[] memory Area = new uint[](countID);
-        for (uint i = 0; i < countID; i++) 
-        {
-            reqType[i] = requests[reqCase[i]].requestType == RequestType.NewHome ? "NewHome" : "EditHome";
-            Address[i] = requests[reqCase[i]].home.homeAddress;
-            Cost[i] = requests[reqCase[i]].home.cost;
-            Area[i] = requests[reqCase[i]].home.area;
+        uint[] memory ids = new uint[](requestInitiator.length);
+        uint[] memory types = new uint[](requestInitiator.length);
+        string[] memory homeAddresses = new string[](requestInitiator.length);
+        for(uint i=0;i!=requestInitiator.length;i++){
+            ids[i] = i;
+            types[i] = requests[requestInitiator[i]].requestType == RequestType.NewHome ? 0: 1;
+            homeAddresses[i] = requests[requestInitiator[i]].homeAddress;
         }
-        return (reqType, Address, Cost, Area);
+        return (ids, types, homeAddresses);
+    }
+    
+    function EditCost(uint _cost) public
+    {
+        cost = _cost;
     }
 }
