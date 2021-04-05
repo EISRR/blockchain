@@ -1,42 +1,34 @@
-pragma solidity >=0.4.22 <0.8.2;
+pragma solidity >=0.4.22;
 pragma experimental ABIEncoderV2;
 
-contract Owned {
+contract Owned{
+    address payable private owner;
     
-    address private owner;
-    
-    constructor() public
-    {
+    constructor() public {
         owner = msg.sender;
     }
     
-    modifier OnlyOwner
-    {
-        require
-        (
+    modifier OnlyOwner{
+        require(
             msg.sender == owner,
-            'You must be the owner!'
-        );
+            'Only owner can run this function!'
+            );
         _;
     }
     
-    function ChangeOwner(address newOwner) public OnlyOwner 
-    {
+    function ChangeOwner(address payable newOwner) public OnlyOwner{
         owner = newOwner;
     }
     
-    function GetOwner() public returns (address)
-    {
+    function GetOwner() public returns (address){
         return owner;
     }
-    
 }
 
-contract Test is Owned
-{
+contract ROSReestr is Owned{
     enum RequestType {NewHome, EditHome}
     
-    unit private cost = 1e12;
+    uint private price = 100 wei;
     
     struct Ownership
     {
@@ -50,7 +42,7 @@ contract Test is Owned
         string name;
         uint passSer;
         uint passNum;
-        string date;
+        uint256 date;
         string phoneNumber;
     }
     
@@ -64,10 +56,10 @@ contract Test is Owned
     struct Request
     {
         RequestType requestType;
-        Home home;
+        string homeAddress;
+        uint area;
+        uint cost;
         uint result;
-        unit area;
-        unit cost;
         address adr;
         bool isProcessed;
     }
@@ -82,14 +74,15 @@ contract Test is Owned
     
     mapping(address => Employee) private employees;
     mapping(address => Owner) private owners;
+    //key is request initiator
     mapping(address => Request) private requests;
     address[] requestInitiator;
     mapping(string => Home) private homes;
     mapping(string => Ownership[]) private ownerships;
     
-    unit private countId = 0;
+    uint private amount;
     
-     modifier OnlyEmployee {
+    modifier OnlyEmployee {
         require(
             employees[msg.sender].isset != false,
             'Only Employee can run this function!'
@@ -105,8 +98,7 @@ contract Test is Owned
         _;
     }
     
-    function AddHome(string memory _adr, uint _area, uint _cost) public
-    {
+    function AddHome(string memory _adr, uint _area, uint _cost) public {
         Home memory h;
         h.homeAddress = _adr;
         h.area = _area;
@@ -114,40 +106,30 @@ contract Test is Owned
         homes[_adr] = h;
     }
     
-    function GetHome(string memory adr) public returns(uint _area, uint _cost)
-    {
+    function GetHome(string memory adr) public returns (uint _area, uint _cost){
         return (homes[adr].area, homes[adr].cost);
     }
     
-    function EditHome(string memory _adr, uint _area, uint _cost) public
-    {
-        homes[_adr].area = _area;
-        homes[_adr].cost = _cost;
-    }
-    
-    function AddEmployee(address _adr, string memory _name, string memory _position, string memory _phoneNumber) public OnlyOwner
-    {
+    function AddEmployee(address empl, string memory _name, string memory _pos, string memory _phone) public OnlyOwner{
         Employee memory e;
         e.name = _name;
-        e.position = _position;
-        e.phoneNumber = _phoneNumber;
+        e.position = _pos;
+        e.phoneNumber = _phone;
         e.isset = true;
-        employees[_id] = e;
+        employees[empl] = e;
     }
     
-    function GetEmployee(address adr) public OnlyOwner returns(string memory _name, string memory _position, string memory _phoneNumber)
-    {
-        return (employees[adr].name, employees[adr].position, employees[adr].phoneNumber);
+    function EditEmployee(address empl, string memory _name, string memory _pos, string memory _phone) public OnlyOwner{
+        employees[empl].name = _name;
+        employees[empl].position = _pos;
+        employees[empl].phoneNumber = _phone;
     }
     
-    function EditEmployee(address _adr, string memory _name, string memory _position, string memory _phoneNumber) public Only Owner
-    {
-        employees[_adr].name = _name;
-        employees[_adr].position = _position;
-        employees[_adr].phoneNumber = _phoneNumber;
+    function GetEmployee(address empl) public OnlyOwner returns (string memory _name, string memory _pos, string memory _phone){
+        return (employees[empl].name, employees[empl].position, employees[empl].phoneNumber);
     }
     
-    function DeleteEmployee(address _adr) public OnlyOwner
+    function DeleteEmployee(address empl) public OnlyOwner returns (bool)
     {
         if (employees[empl].isset == true){
             delete employees[empl];
@@ -155,9 +137,8 @@ contract Test is Owned
         }
         return false;
     }
-
-    // ЗАПРОС
-    function AddRequestHome(address empl, string memory _homeAddress, uint _area, uint _cost) public 
+    
+    function AddRequest(uint rType, string memory adr, uint area, uint cost, address newOwner) public Costs(price) payable returns (bool)
     {
         Request memory r;
         r.requestType = rType == 0? RequestType.NewHome: RequestType.EditHome;
@@ -169,7 +150,7 @@ contract Test is Owned
         r.isProcessed = false;
         requests[msg.sender] = r;
         requestInitiator.push(msg.sender);
-        countID += msg.value;
+        amount += msg.value;
         return true;
     }
     
@@ -186,8 +167,19 @@ contract Test is Owned
         return (ids, types, homeAddresses);
     }
     
-    function EditCost(uint _cost) public
+    function ProcessedRequest(address _requestInitiator) public OnlyOwner returns (bool)
     {
-        cost = _cost;
+        
     }
+    
+    function EditCost(uint _price) public OnlyOwner
+    {
+        price = _price;
+    }
+    
+    function GetCost() public returns (uint)
+    {
+        return price;
+    }
+    
 }
