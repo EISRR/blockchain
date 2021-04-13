@@ -5,7 +5,7 @@ contract Owned{
     address payable private owner;
     
     constructor() public {
-        owner = msg.sender;
+        owner = payable(msg.sender);
     }
     
     modifier OnlyOwner{
@@ -60,6 +60,7 @@ contract ROSReestr is Owned{
         uint area;
         uint cost;
         uint result;
+        Home home;
         address adr;
         bool isProcessed;
     }
@@ -76,11 +77,14 @@ contract ROSReestr is Owned{
     mapping(address => Owner) private owners;
     //key is request initiator
     mapping(address => Request) private requests;
+    
     address[] requestInitiator;
-    mapping(string => Home) private homes;
+    address[] listHomeInitiator;
+    mapping(address => Home) private homes;
     mapping(string => Ownership[]) private ownerships;
     
     uint private amount;
+    uint private count;
     
     modifier OnlyEmployee {
         require(
@@ -103,11 +107,13 @@ contract ROSReestr is Owned{
         h.homeAddress = _adr;
         h.area = _area;
         h.cost = _cost;
-        homes[_adr] = h;
+        homes[msg.sender] = h;
+        listHomeInitiator.push(msg.sender);
+        //count += msg.value;
     }
     
     function GetHome(string memory adr) public returns (uint _area, uint _cost){
-        return (homes[adr].area, homes[adr].cost);
+//        return (homes[adr].area, homes[adr].cost);
     }
     
     function AddEmployee(address empl, string memory _name, string memory _pos, string memory _phone) public OnlyOwner{
@@ -140,12 +146,14 @@ contract ROSReestr is Owned{
     
     function AddRequest(uint rType, string memory adr, uint area, uint cost, address newOwner) public Costs(price) payable returns (bool)
     {
+        Home memory h;
         Request memory r;
         r.requestType = rType == 0? RequestType.NewHome: RequestType.EditHome;
         r.homeAddress = adr;
         r.area = area;
         r.cost = cost;
         r.result = 0;
+        r.home = h;
         r.adr = rType==0?address(0):newOwner;
         r.isProcessed = false;
         requests[msg.sender] = r;
@@ -167,7 +175,20 @@ contract ROSReestr is Owned{
         return (ids, types, homeAddresses);
     }
     
-    function ProcessedRequest(address _requestInitiator) public OnlyOwner returns (bool)
+    function GetListHome() public view returns (uint[] memory, uint[] memory, string[] memory)
+    {
+        uint[] memory costss = new uint[](listHomeInitiator.length);
+        uint[] memory areas = new uint[](listHomeInitiator.length);
+        string[] memory homeAddresses = new string[](listHomeInitiator.length);
+        for(uint i=0;i!=listHomeInitiator.length;i++){
+            costss[i] = homes[listHomeInitiator[i]].cost;
+            areas[i] = homes[listHomeInitiator[i]].area;
+            homeAddresses[i] = homes[listHomeInitiator[i]].homeAddress;
+        }
+        return (costss, areas, homeAddresses);
+    }
+    
+    function GetListOwner() public view returns (uint[] memory, uint[] memory, string[] memory)
     {
         
     }
