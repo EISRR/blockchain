@@ -1,4 +1,4 @@
-pragma solidity >=0.4.22;
+pragma solidity >=0.6.0 <=0.8.3;
 pragma experimental ABIEncoderV2;
 
 contract Owned{
@@ -11,7 +11,7 @@ contract Owned{
     modifier OnlyOwner{
         require(
             msg.sender == owner,
-            'Only owner can run this function!'
+            'WRNING!!! your backdoor is under attack!'
             );
         _;
     }
@@ -27,7 +27,7 @@ contract Owned{
 
 contract ROSReestr is Owned{
     enum RequestType {NewHome, EditHome}
-    
+    enum OwnerOperation {Add, Edit, Delete}
     uint private price = 100 wei;
     
     struct Ownership
@@ -44,6 +44,7 @@ contract ROSReestr is Owned{
         uint passNum;
         uint256 date;
         string phoneNumber;
+        bool isset;
     }
     
     struct Home
@@ -51,16 +52,17 @@ contract ROSReestr is Owned{
         string homeAddress;
         uint area;
         uint cost;
+        bool isset;
     }
     
     struct Request
     {
         RequestType requestType;
+        OwnerOperation operation;
         string homeAddress;
         uint area;
         uint cost;
         uint result;
-        Home home;
         address adr;
         bool isProcessed;
     }
@@ -77,14 +79,15 @@ contract ROSReestr is Owned{
     mapping(address => Owner) private owners;
     //key is request initiator
     mapping(address => Request) private requests;
-    
     address[] requestInitiator;
+    address[] ownersArray;
     address[] listHomeInitiator;
-    mapping(address => Home) private homes;
+    mapping(address => Home) private homess;
+    mapping(string => Home) private homes;
+    string[] addresses;
     mapping(string => Ownership[]) private ownerships;
     
     uint private amount;
-    uint private count;
     
     modifier OnlyEmployee {
         require(
@@ -107,13 +110,14 @@ contract ROSReestr is Owned{
         h.homeAddress = _adr;
         h.area = _area;
         h.cost = _cost;
-        homes[msg.sender] = h;
+        homess[msg.sender] = h;
+        homes[_adr] = h;
         listHomeInitiator.push(msg.sender);
-        //count += msg.value;
+        addresses.push(_adr);
     }
     
     function GetHome(string memory adr) public returns (uint _area, uint _cost){
-//        return (homes[adr].area, homes[adr].cost);
+        //return (homes[adr].area, homes[adr].cost);
     }
     
     function AddEmployee(address empl, string memory _name, string memory _pos, string memory _phone) public OnlyOwner{
@@ -146,14 +150,12 @@ contract ROSReestr is Owned{
     
     function AddRequest(uint rType, string memory adr, uint area, uint cost, address newOwner) public Costs(price) payable returns (bool)
     {
-        Home memory h;
         Request memory r;
         r.requestType = rType == 0? RequestType.NewHome: RequestType.EditHome;
         r.homeAddress = adr;
         r.area = area;
         r.cost = cost;
         r.result = 0;
-        r.home = h;
         r.adr = rType==0?address(0):newOwner;
         r.isProcessed = false;
         requests[msg.sender] = r;
@@ -181,16 +183,37 @@ contract ROSReestr is Owned{
         uint[] memory areas = new uint[](listHomeInitiator.length);
         string[] memory homeAddresses = new string[](listHomeInitiator.length);
         for(uint i=0;i!=listHomeInitiator.length;i++){
-            costss[i] = homes[listHomeInitiator[i]].cost;
-            areas[i] = homes[listHomeInitiator[i]].area;
-            homeAddresses[i] = homes[listHomeInitiator[i]].homeAddress;
+            costss[i] = homess[listHomeInitiator[i]].cost;
+            areas[i] = homess[listHomeInitiator[i]].area;
+            homeAddresses[i] = homess[listHomeInitiator[i]].homeAddress;
         }
         return (costss, areas, homeAddresses);
     }
     
-    function GetListOwner() public view returns (uint[] memory, uint[] memory, string[] memory)
-    {
-        
+    function ProcessRequest(uint Id) public OnlyEmployee returns (uint){
+        if(Id<0 || Id>=requestInitiator.length) return 1;
+        Request memory r = requests[requestInitiator[Id]];
+        if(r.requestType == RequestType.NewHome && homes[r.homeAddress].isset){
+            delete requests[requestInitiator[Id]];
+            delete requestInitiator[Id];
+            return 2;
+        } 
+        if(r.requestType == RequestType.NewHome){
+            //add new Home
+            AddHome(r.homeAddress, r.area, r.cost);
+            //set ownership
+            Ownership memory ownership;
+            ownership.homeAddress = r.homeAddress;
+            ownership.owner = requestInitiator[Id];
+            ownership.p = 1;
+            ownerships[r.homeAddress].push(ownership);
+        } else {
+            //edit home
+            //change ownership
+        }
+        delete requests[requestInitiator[Id]];
+        delete requestInitiator[Id];
+        return 0;
     }
     
     function EditCost(uint _price) public OnlyOwner
@@ -202,5 +225,4 @@ contract ROSReestr is Owned{
     {
         return price;
     }
-    
 }
