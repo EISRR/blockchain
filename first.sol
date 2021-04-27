@@ -117,7 +117,7 @@ contract ROSReestr is Owned{
     }
     
     function GetHome(string memory adr) public returns (uint _area, uint _cost){
-        //return (homes[adr].area, homes[adr].cost);
+        return (homes[adr].area, homes[adr].cost);
     }
     
     function AddEmployee(address empl, string memory _name, string memory _pos, string memory _phone) public OnlyOwner{
@@ -209,6 +209,7 @@ contract ROSReestr is Owned{
             ownerships[r.homeAddress].push(ownership);
         } else {
             //edit home
+            Home memory h = homes[r.homeAddress];
             //change ownership
         }
         delete requests[requestInitiator[Id]];
