@@ -11,7 +11,7 @@ contract Owned{
     modifier OnlyOwner{
         require(
             msg.sender == owner,
-            'WRNING!!! your backdoor is under attack!'
+            'Only owner can run this function!'
             );
         _;
     }
@@ -73,6 +73,7 @@ contract ROSReestr is Owned{
         string position;
         string phoneNumber;
         bool isset;
+        
     }
     
     mapping(address => Employee) private employees;
@@ -193,6 +194,7 @@ contract ROSReestr is Owned{
     function ProcessRequest(uint Id) public OnlyEmployee returns (uint){
         if(Id<0 || Id>=requestInitiator.length) return 1;
         Request memory r = requests[requestInitiator[Id]];
+        
         if(r.requestType == RequestType.NewHome && homes[r.homeAddress].isset){
             delete requests[requestInitiator[Id]];
             delete requestInitiator[Id];
@@ -211,6 +213,7 @@ contract ROSReestr is Owned{
             //edit home
             Home memory h = homes[r.homeAddress];
             //change ownership
+            
         }
         delete requests[requestInitiator[Id]];
         delete requestInitiator[Id];
